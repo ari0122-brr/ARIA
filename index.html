@@ -15,26 +15,68 @@
     <!-- 메인 콘텐츠 영역 -->
     <main id="main-content">
       
-      <!-- 1. 홈 탭 -->
+      <!-- 1. 홈 탭 (축구 뉴스/소식 추가) -->
       <section id="tab-home" class="tab-content active">
         <h1 class="page-title">홈</h1>
         <div class="card">
           <p class="greeting">오늘도 좋은 하루 보내세요! ✨</p>
         </div>
-      </section>
 
-      <!-- 2. 시간표 탭 -->
-      <section id="tab-schedule" class="tab-content">
-        <h1 class="page-title">시간표</h1>
-        <div class="card" id="schedule-container">
-          <p style="color: var(--text-sub); text-align: center; padding: 20px 0;">시간표를 불러오는 중입니다...</p>
+        <div class="card">
+          <div class="card-header">
+            <i data-lucide="trophy"></i>
+            <h3>오늘의 축구 소식 ⚽</h3>
+          </div>
+          <ul id="football-news-list" class="news-list">
+            <li>⚽ 해외축구 손흥민 경기 프리뷰 및 주요 소식</li>
+            <li>⚽ K리그 주말 라운드 하이라이트 요약</li>
+            <li>⚽ 챔피언스리그 조별리그 주요 경기 결과</li>
+          </ul>
         </div>
       </section>
 
-      <!-- 3. 급식 탭 (중식/석식 구분) -->
+      <!-- 2. 시간표 탭 (월~금 시간표 구현) -->
+      <section id="tab-schedule" class="tab-content">
+        <h1 class="page-title">시간표</h1>
+        <div class="timetable-card">
+          <table class="timetable">
+            <thead>
+              <tr>
+                <th>교시</th>
+                <th>월</th>
+                <th>화</th>
+                <th>수</th>
+                <th>목</th>
+                <th>금</th>
+              </tr>
+            </thead>
+            <tbody id="timetable-body">
+              <tr><td>1</td><td>국어</td><td>수학</td><td>영어</td><td>과학</td><td>체육</td></tr>
+              <tr><td>2</td><td>수학</td><td>영어</td><td>국어</td><td>사회</td><td>음악</td></tr>
+              <tr><td>3</td><td>영어</td><td>과학</td><td>수학</td><td>국어</td><td>미술</td></tr>
+              <tr><td>4</td><td>사회</td><td>국어</td><td>체육</td><td>영어</td><td>수학</td></tr>
+              <tr><td>5</td><td>과학</td><td>사회</td><td>기기술</td><td>역사</td><td>자율</td></tr>
+              <tr><td>6</td><td>체육</td><td>자율</td><td>동아리</td><td>음악</td><td>동아리</td></tr>
+              <tr><td>7</td><td>자율</td><td>-</td><td>-</td><td>미술</td><td>-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. 급식 탭 (조식/중식/석식 3분할) -->
       <section id="tab-meal" class="tab-content">
         <h1 class="page-title">오늘의 급식</h1>
         <div class="meal-grid">
+          <div class="meal-card">
+            <div class="meal-header">
+              <i data-lucide="sunrise"></i>
+              <h3>조식</h3>
+            </div>
+            <ul id="breakfast-list" class="meal-list">
+              <li>불러오는 중...</li>
+            </ul>
+          </div>
+
           <div class="meal-card">
             <div class="meal-header">
               <i data-lucide="sun"></i>
@@ -69,7 +111,7 @@
 
     </main>
 
-    <!-- 하단 탭 바 (노션 스타일 아웃라인 아이콘) -->
+    <!-- 하단 탭 바 (노션 스타일) -->
     <nav class="bottom-nav">
       <button class="nav-item active" data-tab="tab-home">
         <i data-lucide="home"></i>
