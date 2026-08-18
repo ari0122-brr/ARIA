@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>다이어리보드</title>
+<meta name="theme-color" content="#2F4538" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="다이어리보드" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>다이어리보드</h1>
+        <p id="today-label" class="topbar-date"></p>
+      </div>
+    </div>
+    <button id="settings-btn" class="icon-btn" aria-label="설정" title="설정">⚙</button>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab-btn" data-view="home"><span class="tab-icon">🏠</span><span>홈</span></button>
+    <button class="tab-btn" data-view="timetable"><span class="tab-icon">🗓</span><span>시간표</span></button>
+    <button class="tab-btn" data-view="todo"><span class="tab-icon">✓</span><span>할일</span></button>
+    <button class="tab-btn" data-view="notes"><span class="tab-icon">📝</span><span>노트</span></button>
+    <button class="tab-btn" data-view="calendar"><span class="tab-icon">📅</span><span>캘린더</span></button>
+  </nav>
+
+</div>
+
+<div id="modal-root"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
