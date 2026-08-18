@@ -1,48 +1,95 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<title>ARIA</title>
-<meta name="theme-color" content="#1F1F1E" />
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icons/icon-192.png" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="ARIA" />
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ari</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-<div id="app">
+  <div class="app-container">
+    <!-- 메인 콘텐츠 영역 -->
+    <main id="main-content">
+      
+      <!-- 1. 홈 탭 -->
+      <section id="tab-home" class="tab-content active">
+        <h1 class="page-title">홈</h1>
+        <div class="card">
+          <p class="greeting">오늘도 좋은 하루 보내세요! ✨</p>
+        </div>
+      </section>
 
-  <header class="topbar">
-    <div class="topbar-title">
-      <span class="brand-mark" aria-hidden="true">A</span>
-      <div>
-        <h1>ARIA</h1>
-        <p id="today-label" class="topbar-date"></p>
-      </div>
-    </div>
-    <button id="settings-btn" class="icon-btn" aria-label="설정" title="설정">⚙</button>
-  </header>
+      <!-- 2. 시간표 탭 -->
+      <section id="tab-schedule" class="tab-content">
+        <h1 class="page-title">시간표</h1>
+        <div class="card" id="schedule-container">
+          <p style="color: var(--text-sub); text-align: center; padding: 20px 0;">시간표를 불러오는 중입니다...</p>
+        </div>
+      </section>
 
-  <main id="view" class="view"></main>
+      <!-- 3. 급식 탭 (중식/석식 구분) -->
+      <section id="tab-meal" class="tab-content">
+        <h1 class="page-title">오늘의 급식</h1>
+        <div class="meal-grid">
+          <div class="meal-card">
+            <div class="meal-header">
+              <i data-lucide="sun"></i>
+              <h3>중식</h3>
+            </div>
+            <ul id="lunch-list" class="meal-list">
+              <li>불러오는 중...</li>
+            </ul>
+          </div>
+          
+          <div class="meal-card">
+            <div class="meal-header">
+              <i data-lucide="moon"></i>
+              <h3>석식</h3>
+            </div>
+            <ul id="dinner-list" class="meal-list">
+              <li>불러오는 중...</li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-  <nav class="tabbar" id="tabbar">
-    <button class="tab-btn" data-view="home"><span class="tab-icon">🏠</span><span>홈</span></button>
-    <button class="tab-btn" data-view="timetable"><span class="tab-icon">🗓</span><span>시간표</span></button>
-    <button class="tab-btn" data-view="todo"><span class="tab-icon">✓</span><span>할일</span></button>
-    <button class="tab-btn" data-view="notes"><span class="tab-icon">📝</span><span>노트</span></button>
-    <button class="tab-btn" data-view="calendar"><span class="tab-icon">📅</span><span>캘린더</span></button>
-  </nav>
+      <!-- 4. 할 일 탭 -->
+      <section id="tab-todo" class="tab-content">
+        <h1 class="page-title">할 일</h1>
+        <div class="todo-input-group">
+          <input type="text" id="todo-input" placeholder="새로운 할 일 입력...">
+          <button id="add-todo-btn"><i data-lucide="plus"></i></button>
+        </div>
+        <ul id="todo-list" class="todo-list"></ul>
+      </section>
 
-</div>
+    </main>
 
-<div id="modal-root"></div>
+    <!-- 하단 탭 바 (노션 스타일 아웃라인 아이콘) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tab-home">
+        <i data-lucide="home"></i>
+        <span>홈</span>
+      </button>
+      <button class="nav-item" data-tab="tab-schedule">
+        <i data-lucide="calendar"></i>
+        <span>시간표</span>
+      </button>
+      <button class="nav-item" data-tab="tab-meal">
+        <i data-lucide="utensils"></i>
+        <span>급식</span>
+      </button>
+      <button class="nav-item" data-tab="tab-todo">
+        <i data-lucide="check-square"></i>
+        <span>할 일</span>
+      </button>
+    </nav>
+  </div>
 
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
