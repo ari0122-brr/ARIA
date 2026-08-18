@@ -41,9 +41,8 @@ const defaultState = {
   periods: 7,
   timetable: { mon: [], tue: [], wed: [], thu: [], fri: [] },
   todos: [], // { id, text, done }
-  notes: [], // { id, title, body, updatedAt }
   events: [], // { id, date: 'YYYYMMDD', title }
-  mealCache: {} // ymd -> menu text
+  mealCache: {} // ymd -> { 조식: '...', 중식: '...', 석식: '...' }
 };
 
 function loadState() {
@@ -65,7 +64,6 @@ function saveState() {
 let currentView = "home";
 let calCursor = new Date(); // 캘린더에서 보고 있는 월
 let calSelected = todayStr();
-let openNoteId = null;
 
 const viewEl = document.getElementById("view");
 const tabbar = document.getElementById("tabbar");
@@ -78,7 +76,6 @@ tabbar.addEventListener("click", (e) => {
 
 function navigate(view) {
   currentView = view;
-  openNoteId = null;
   render();
 }
 
@@ -92,8 +89,8 @@ function render() {
 
   if (currentView === "home") renderHome();
   else if (currentView === "timetable") renderTimetable();
+  else if (currentView === "meal") renderMeal();
   else if (currentView === "todo") renderTodo();
-  else if (currentView === "notes") renderNotes();
   else if (currentView === "calendar") renderCalendar();
 
   initIcons();
@@ -144,18 +141,19 @@ async function fetchMeal(ymd) {
     SD_SCHUL_CODE: state.school.schoolCode,
     MLSV_YMD: ymd
   });
-  if (!rows.length) {
-    state.mealCache[ymd] = "";
-    saveState();
-    return "";
-  }
-  // 여러 끼(조식/중식/석식)가 있으면 합쳐서 보여줌
-  const text = rows
-    .map((r) => r.DDISH_NM.replace(/<br\/?>/gi, "\n").replace(/\([0-9.]+\)/g, "").trim())
-    .join("\n\n");
-  state.mealCache[ymd] = text;
+  const meals = { "조식": "", "중식": "", "석식": "" };
+  rows.forEach((r) => {
+    const name = r.MMEAL_SC_NM || "중식";
+    const text = (r.DDISH_NM || "")
+      .replace(/<br\/?>/gi, "\n")
+      .replace(/\([0-9.]+\)/g, "")
+      .trim();
+    if (name in meals) meals[name] = text;
+    else meals[name] = text;
+  });
+  state.mealCache[ymd] = meals;
   saveState();
-  return text;
+  return meals;
 }
 
 function mondayOf(date) {
@@ -210,41 +208,33 @@ async function fetchTimetableWeek() {
 }
 
 /* ===========================================================
-   홈
+   홈 (추후 채울 예정 — 지금은 비워둠)
    =========================================================== */
 function renderHome() {
-  const now = new Date();
-  const dayIdx = now.getDay();
-  const dowKey = DOW_KEYS[dayIdx - 1]; // mon=0
-  const isWeekday = dayIdx >= 1 && dayIdx <= 5;
-  const ymd = todayStr(now);
+  viewEl.innerHTML = `
+    <div class="empty-hint" style="padding-top:40px; text-align:center;">
+      아직 채워지지 않았어요.
+    </div>
+  `;
+}
 
+/* ===========================================================
+   급식
+   =========================================================== */
+function renderMeal() {
+  const ymd = todayStr();
   viewEl.innerHTML = `
     <div class="section-title"><i data-lucide="utensils" class="ti"></i>오늘의 급식</div>
     <div id="meal-slot"></div>
-
-    <div class="section-title"><i data-lucide="calendar-clock" class="ti"></i>오늘 시간표</div>
-    <div id="tt-slot"></div>
   `;
-
   renderMealSlot(ymd);
-
-  const ttSlot = document.getElementById("tt-slot");
-  if (!isWeekday) {
-    ttSlot.innerHTML = `<div class="empty-hint">주말엔 시간표가 없어요. 푹 쉬기 🌿</div>`;
-  } else {
-    const periods = state.timetable[dowKey] || [];
-    const filled = periods.map((s, i) => ({ i: i + 1, s })).filter((p) => p.s && p.s.trim());
-    if (!filled.length) {
-      ttSlot.innerHTML = `<div class="empty-hint">아직 ${DOW_LABEL[dowKey]}요일 시간표가 없어요. '시간표' 탭에서 채워보세요.</div>`;
-    } else {
-      ttSlot.innerHTML = `<div class="today-schedule">${filled
-        .map((p) => `<div class="period-pill"><div class="n">${p.i}교시</div><div class="s">${escapeHtml(p.s)}</div></div>`)
-        .join("")}</div>`;
-    }
-  }
-  initIcons();
 }
+
+const MEAL_ORDER = [
+  { key: "조식", icon: "sunrise" },
+  { key: "중식", icon: "sun" },
+  { key: "석식", icon: "moon" }
+];
 
 function renderMealSlot(ymd) {
   const slot = document.getElementById("meal-slot");
@@ -262,23 +252,35 @@ function renderMealSlot(ymd) {
   slot.innerHTML = `
     <div class="meal-card">
       <div class="meal-card-head"><h2>${escapeHtml(state.school.name)}</h2><span>${fmtYmd(ymd)}</span></div>
-      <div class="meal-list" id="meal-text">불러오는 중…</div>
+      <div id="meal-sections">불러오는 중…</div>
     </div>`;
   fetchMeal(ymd)
-    .then((text) => {
-      const el = document.getElementById("meal-text");
+    .then((meals) => {
+      const el = document.getElementById("meal-sections");
       if (!el) return;
-      el.textContent = text || "오늘은 등록된 급식 정보가 없어요 (주말·방학 등).";
+      const any = MEAL_ORDER.some((m) => meals[m.key]);
+      if (!any) {
+        el.innerHTML = `<div class="meal-empty">오늘은 등록된 급식 정보가 없어요 (주말·방학 등).</div>`;
+        return;
+      }
+      el.innerHTML = MEAL_ORDER.map(
+        (m) => `
+        <div class="meal-section">
+          <div class="meal-section-head"><i data-lucide="${m.icon}" class="ti"></i>${m.key}</div>
+          <div class="meal-list">${meals[m.key] ? escapeHtml(meals[m.key]) : '<span class="meal-none">정보 없음</span>'}</div>
+        </div>`
+      ).join("");
+      initIcons();
     })
     .catch((err) => {
-      const el = document.getElementById("meal-text");
+      const el = document.getElementById("meal-sections");
       if (!el) return;
       el.innerHTML = `급식 정보를 불러오지 못했어요.<br><span style="font-size:11.5px;color:var(--danger)">${escapeHtml(err.message || "")}</span>`;
     });
 }
 
 /* ===========================================================
-   시간표 (수동 입력)
+   시간표 (수동 입력 + 나이스 불러오기)
    =========================================================== */
 function renderTimetable() {
   viewEl.innerHTML = `
@@ -341,12 +343,12 @@ function buildTimetableGrid() {
     html += `<div class="pnum">${p + 1}</div>`;
     DOW_KEYS.forEach((k) => {
       const val = state.timetable[k][p] || "";
-      html += `<div class="tt-cell"><textarea data-day="${k}" data-idx="${p}">${escapeHtml(val)}</textarea></div>`;
+      html += `<div class="tt-cell"><input type="text" data-day="${k}" data-idx="${p}" value="${escapeAttr(val)}" /></div>`;
     });
   }
   grid.innerHTML = html;
-  grid.querySelectorAll("textarea").forEach((ta) => {
-    ta.addEventListener("input", (e) => {
+  grid.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("input", (e) => {
       const day = e.target.dataset.day;
       const idx = Number(e.target.dataset.idx);
       const arr = state.timetable[day];
@@ -419,103 +421,6 @@ function addTodo() {
   saveState();
   input.value = "";
   renderTodo();
-}
-
-/* ===========================================================
-   노트
-   =========================================================== */
-function renderNotes() {
-  if (openNoteId) return renderNoteEditor();
-  const notes = state.notes.slice().sort((a, b) => b.updatedAt - a.updatedAt);
-  viewEl.innerHTML = `
-    <div class="section-title" style="margin-top:8px"><i data-lucide="file-text" class="ti"></i>노트</div>
-    <div class="add-row">
-      <input id="note-title-new" placeholder="새 노트 제목..." />
-      <button class="add-btn" id="note-add">+</button>
-    </div>
-    <div id="note-list"></div>
-  `;
-  const list = document.getElementById("note-list");
-  if (!notes.length) {
-    list.innerHTML = `<div class="empty-hint">아직 노트가 없어요.</div>`;
-  } else {
-    list.innerHTML = notes
-      .map(
-        (n) => `
-      <div class="note-item" data-id="${n.id}">
-        <div>
-          <h3>${escapeHtml(n.title || "제목 없음")}</h3>
-          <p>${escapeHtml((n.body || "").slice(0, 60))}</p>
-          <div class="meta">${new Date(n.updatedAt).toLocaleDateString("ko-KR")}</div>
-        </div>
-        <button class="del-btn" data-del="${n.id}">✕</button>
-      </div>`
-      )
-      .join("");
-  }
-  document.getElementById("note-add").onclick = () => {
-    const titleInput = document.getElementById("note-title-new");
-    const title = titleInput.value.trim() || "제목 없음";
-    const n = { id: uid(), title, body: "", updatedAt: Date.now() };
-    state.notes.push(n);
-    saveState();
-    openNoteId = n.id;
-    renderNotes();
-  };
-  list.querySelectorAll(".note-item").forEach((el) =>
-    el.addEventListener("click", (e) => {
-      if (e.target.closest(".del-btn")) return;
-      openNoteId = el.dataset.id;
-      renderNotes();
-    })
-  );
-  list.querySelectorAll("[data-del]").forEach((btn) =>
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      state.notes = state.notes.filter((n) => n.id !== btn.dataset.del);
-      saveState();
-      renderNotes();
-    })
-  );
-  initIcons();
-}
-
-function renderNoteEditor() {
-  const note = state.notes.find((n) => n.id === openNoteId);
-  if (!note) {
-    openNoteId = null;
-    return renderNotes();
-  }
-  viewEl.innerHTML = `
-    <div class="back-row">
-      <button id="note-back">‹ 노트 목록</button>
-      <button class="del-btn" id="note-del">삭제</button>
-    </div>
-    <div class="note-editor">
-      <input class="note-title" id="note-title" value="${escapeAttr(note.title)}" placeholder="제목" />
-      <textarea class="note-body" id="note-body" placeholder="내용을 적어보세요...">${escapeHtml(note.body || "")}</textarea>
-    </div>
-  `;
-  document.getElementById("note-back").onclick = () => {
-    openNoteId = null;
-    renderNotes();
-  };
-  document.getElementById("note-del").onclick = () => {
-    state.notes = state.notes.filter((n) => n.id !== note.id);
-    saveState();
-    openNoteId = null;
-    renderNotes();
-  };
-  const titleEl = document.getElementById("note-title");
-  const bodyEl = document.getElementById("note-body");
-  const persist = () => {
-    note.title = titleEl.value;
-    note.body = bodyEl.value;
-    note.updatedAt = Date.now();
-    saveState();
-  };
-  titleEl.addEventListener("input", persist);
-  bodyEl.addEventListener("input", persist);
 }
 
 /* ===========================================================

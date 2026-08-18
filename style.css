@@ -58,10 +58,8 @@ input, textarea, select{ font-family: inherit; }
   color: var(--bg);
   flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0;
 }
+.brand-mark svg{ width:17px; height:17px; stroke-width: 2.1px; }
 .topbar h1{
   font-weight: 800;
   font-size: 17px;
@@ -250,20 +248,18 @@ input, textarea, select{ font-family: inherit; }
   color: var(--ink-faint);
   display:flex; align-items:center; justify-content:center;
 }
-.tt-cell textarea{
+.tt-cell input{
   width:100%;
   height: 44px;
-  resize:none;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-soft);
-  padding: 6px 6px;
+  padding: 0 6px;
   font-size: 12px;
   color: var(--ink);
-  line-height: 1.3;
   text-align:center;
 }
-.tt-cell textarea:focus{ outline: 1.5px solid var(--ink); border-color: transparent; background: var(--surface); }
+.tt-cell input:focus{ outline: 1.5px solid var(--ink); border-color: transparent; background: var(--surface); }
 
 /* ===== 리스트류 공통 (할일) ===== */
 .add-row{
@@ -317,50 +313,19 @@ input, textarea, select{ font-family: inherit; }
 }
 .del-btn:hover{ color: var(--danger); }
 
-/* ===== 노트 ===== */
-.note-item{
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  padding: 14px 16px;
+/* ===== 급식 (조식/중식/석식) ===== */
+.meal-section{
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.meal-section:first-child{ padding-top: 2px; border-top: none; }
+.meal-section-head{
+  display:flex; align-items:center; gap:7px;
+  font-size: 13px; font-weight:700; color: var(--ink);
   margin-bottom: 8px;
-  cursor:pointer;
-  display:flex; justify-content:space-between; align-items:flex-start;
-  gap: 10px;
 }
-.note-item h3{
-  font-size: 14.5px;
-  margin: 0 0 4px;
-  font-weight:700;
-}
-.note-item p{
-  margin:0; font-size: 12.5px; color: var(--ink-soft);
-  display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;
-}
-.note-item .meta{ font-size: 10.5px; color: var(--ink-faint); margin-top:6px; }
-
-.note-editor{ display:flex; flex-direction:column; height: calc(100vh - 200px); }
-.note-editor input.note-title{
-  font-size: 18px; font-weight:800;
-  border:none; background:none; padding: 6px 2px 12px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 12px;
-}
-.note-editor input.note-title:focus{ outline:none; }
-.note-editor textarea.note-body{
-  flex:1;
-  border:none; background:none; resize:none;
-  font-size: 14.5px; line-height:1.8; padding: 2px;
-}
-.note-editor textarea.note-body:focus{ outline:none; }
-.back-row{
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom: 6px;
-}
-.back-row button{
-  border:none; background:none; color: var(--ink); font-size: 13.5px; cursor:pointer;
-  padding: 6px 0; font-weight:700;
-}
+.meal-section-head .ti{ width:14px; height:14px; color: var(--ink-faint); }
+.meal-none{ color: var(--ink-faint); }
 
 /* ===== 캘린더 ===== */
 .cal-head{

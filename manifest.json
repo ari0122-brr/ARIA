@@ -1,7 +1,7 @@
 {
   "name": "ARIA",
   "short_name": "ARIA",
-  "description": "시간표, 급식, 할일, 노트를 한 곳에서 정리하는 가벼운 개인 보드",
+  "description": "시간표, 급식, 할일, 캘린더를 한 곳에서 정리하는 가벼운 개인 보드",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
