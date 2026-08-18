@@ -1,4 +1,4 @@
-const CACHE_NAME = "diaryboard-v1";
+const CACHE_NAME = "aria-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",

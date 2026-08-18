@@ -1,12 +1,12 @@
 {
-  "name": "다이어리보드",
-  "short_name": "다이어리보드",
-  "description": "시간표, 급식, 할일, 노트를 한 곳에서 — 나만의 가벼운 노션",
+  "name": "ARIA",
+  "short_name": "ARIA",
+  "description": "시간표, 급식, 할일, 노트를 한 곳에서 정리하는 가벼운 개인 보드",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F3F5F1",
-  "theme_color": "#2F4538",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1F1F1E",
   "orientation": "portrait",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

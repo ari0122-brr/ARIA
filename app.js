@@ -1,5 +1,5 @@
 /* ===========================================================
-   다이어리보드 — 저장은 전부 localStorage(이 기기 안)에서만 이뤄짐
+   ARIA — 저장은 전부 localStorage(이 기기 안)에서만 이뤄짐
    =========================================================== */
 
 const STORAGE_KEY = "diaryboard:v1";
@@ -21,9 +21,23 @@ function uid() {
 }
 
 /* ---------- 상태 ---------- */
+function defaultSemester() {
+  const m = new Date().getMonth() + 1;
+  return m >= 3 && m <= 7 ? 1 : 2;
+}
+function defaultSchoolYear() {
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  return m < 3 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
 const defaultState = {
   school: null, // { officeCode, schoolCode, name }
   neisKey: "",
+  grade: "",
+  classNm: "",
+  semester: defaultSemester(),
+  schoolYear: defaultSchoolYear(),
   periods: 7,
   timetable: { mon: [], tue: [], wed: [], thu: [], fri: [] },
   todos: [], // { id, text, done }
@@ -138,6 +152,57 @@ async function fetchMeal(ymd) {
   return text;
 }
 
+function mondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // 월요일로 이동
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+async function fetchTimetableWeek() {
+  if (!state.school) throw new Error("학교를 먼저 연결해주세요");
+  if (!state.grade || !state.classNm) throw new Error("학년/반을 입력해주세요");
+
+  const monday = mondayOf(new Date());
+  const friday = new Date(monday);
+  friday.setDate(friday.getDate() + 4);
+
+  const rows = await neisFetch("hisTimetable", {
+    ATPT_OFCDC_SC_CODE: state.school.officeCode,
+    SD_SCHUL_CODE: state.school.schoolCode,
+    AY: state.schoolYear,
+    SEM: state.semester,
+    GRADE: state.grade,
+    CLASS_NM: state.classNm,
+    TI_FROM_YMD: todayStr(monday),
+    TI_TO_YMD: todayStr(friday)
+  });
+
+  const next = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+  let maxPeriod = state.periods;
+
+  rows.forEach((r) => {
+    const ymd = r.ALL_TI_YMD;
+    const d = new Date(`${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`);
+    const idx = d.getDay() - 1; // mon=0
+    if (idx < 0 || idx > 4) return;
+    const key = DOW_KEYS[idx];
+    const period = Number(r.PERIO);
+    const arr = next[key];
+    while (arr.length < period) arr.push("");
+    arr[period - 1] = (r.ITRT_CNTNT || "").trim();
+    if (period > maxPeriod) maxPeriod = period;
+  });
+
+  if (!rows.length) throw new Error("이번 주 시간표 자료가 없어요 (아직 미등록이거나 방학 기간일 수 있어요)");
+
+  state.timetable = next;
+  state.periods = Math.min(maxPeriod, 10);
+  saveState();
+  return rows.length;
+}
+
 /* ===========================================================
    홈
    =========================================================== */
@@ -211,13 +276,17 @@ function renderTimetable() {
   viewEl.innerHTML = `
     <div class="tt-toolbar">
       <div class="section-title" style="margin:0">주간 시간표</div>
-      <div class="stepper">
-        교시 수
-        <button id="p-minus">−</button>
-        <b id="p-count">${state.periods}</b>
-        <button id="p-plus">+</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="stepper">
+          교시 수
+          <button id="p-minus">−</button>
+          <b id="p-count">${state.periods}</b>
+          <button id="p-plus">+</button>
+        </div>
+        <button class="tt-fetch-btn" id="tt-fetch">나이스로 불러오기</button>
       </div>
     </div>
+    <div class="tt-note">나이스 학급 시간표를 기준으로 불러와요. 선택과목 등으로 개인 시간표와 다를 수 있어 불러온 뒤 직접 칸을 눌러 수정할 수 있어요.</div>
     <div class="tt-grid" id="tt-grid"></div>
   `;
   buildTimetableGrid();
@@ -234,6 +303,23 @@ function renderTimetable() {
       state.periods++;
       saveState();
       renderTimetable();
+    }
+  };
+  document.getElementById("tt-fetch").onclick = async () => {
+    const btn = document.getElementById("tt-fetch");
+    if (!state.school || !state.grade || !state.classNm) {
+      openSettingsModal();
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "불러오는 중…";
+    try {
+      await fetchTimetableWeek();
+      renderTimetable();
+    } catch (err) {
+      alert(err.message || "불러오기에 실패했어요.");
+      btn.disabled = false;
+      btn.textContent = "나이스로 불러오기";
     }
   };
 }
@@ -525,28 +611,65 @@ function openSettingsModal() {
     <div class="modal-overlay" id="modal-overlay">
       <div class="modal-sheet">
         <div class="close-row"><button id="modal-close">×</button></div>
-        <h2>설정</h2>
+        <h2>학교 연결</h2>
+        <p class="modal-sub">급식과 시간표를 자동으로 불러오려면 나이스(NEIS) 인증키와 학교 정보가 필요해요.</p>
+
+        <div class="guide-box">
+          <ol>
+            <li><a href="https://open.neis.go.kr/portal/mainPage.do" target="_blank" rel="noopener">open.neis.go.kr</a> 접속 후 회원가입 · 로그인</li>
+            <li>상단 메뉴에서 <b>오픈API활용 → 활용신청</b> 이동</li>
+            <li>"학교급식식단정보", "시간표" 서비스를 신청 (보통 자동으로 즉시 승인돼요)</li>
+            <li>마이페이지에서 발급된 인증키를 복사해 아래에 붙여넣기</li>
+          </ol>
+        </div>
+
+        <div class="field">
+          <label>나이스 Open API 인증키</label>
+          <input id="neis-key" placeholder="발급받은 인증키 붙여넣기" value="${escapeAttr(state.neisKey)}" />
+          <div class="field-hint">이 기기의 브라우저 안에만 저장되고 외부로 전송되지 않아요.</div>
+        </div>
 
         ${
           state.school
             ? `<div class="school-tag"><div><strong>${escapeHtml(state.school.name)}</strong>연결된 학교</div><button class="del-btn" id="school-clear">해제</button></div>`
-            : ""
+            : `<div class="field">
+                <label>학교 검색</label>
+                <input id="school-search" placeholder="학교 이름을 입력하세요" />
+              </div>
+              <button class="btn-secondary" id="school-search-btn">검색</button>
+              <div id="school-results"></div>`
         }
 
-        <div class="field">
-          <label>나이스(NEIS) Open API 인증키</label>
-          <input id="neis-key" placeholder="발급받은 키 입력 (없어도 일부 조회 가능)" value="${escapeAttr(state.neisKey)}" />
-          <div class="field-hint">
-            <a href="https://open.neis.go.kr/portal/mainPage.do" target="_blank" rel="noopener">open.neis.go.kr</a>에서 무료로 즉시 발급돼요. 이 기기의 브라우저 안에만 저장되고 외부로 전송되지 않아요.
+        ${
+          state.school
+            ? `
+        <div class="field-row" style="margin-top:16px;">
+          <div class="field">
+            <label>학년도</label>
+            <input id="school-year" type="number" value="${escapeAttr(state.schoolYear)}" />
+          </div>
+          <div class="field">
+            <label>학기</label>
+            <select id="school-sem">
+              <option value="1" ${state.semester === 1 ? "selected" : ""}>1학기</option>
+              <option value="2" ${state.semester === 2 ? "selected" : ""}>2학기</option>
+            </select>
           </div>
         </div>
-
-        <div class="field">
-          <label>학교 검색</label>
-          <input id="school-search" placeholder="학교 이름 (예: 능주고등학교)" />
+        <div class="field-row">
+          <div class="field">
+            <label>학년</label>
+            <input id="school-grade" placeholder="예: 2" value="${escapeAttr(state.grade)}" />
+          </div>
+          <div class="field">
+            <label>반</label>
+            <input id="school-class" placeholder="예: 5" value="${escapeAttr(state.classNm)}" />
+          </div>
         </div>
-        <button class="btn-secondary" id="school-search-btn">검색</button>
-        <div id="school-results"></div>
+        <div class="field-hint" style="margin-bottom:6px;">학년/반은 '시간표' 탭에서 나이스 시간표를 자동으로 불러올 때 쓰여요.</div>
+        `
+            : ""
+        }
       </div>
     </div>
   `;
@@ -572,10 +695,42 @@ function openSettingsModal() {
     };
   }
 
-  document.getElementById("school-search-btn").onclick = doSchoolSearch;
-  document.getElementById("school-search").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") doSchoolSearch();
-  });
+  const searchBtn = document.getElementById("school-search-btn");
+  if (searchBtn) {
+    searchBtn.onclick = doSchoolSearch;
+    document.getElementById("school-search").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doSchoolSearch();
+    });
+  }
+
+  const yearInput = document.getElementById("school-year");
+  if (yearInput) {
+    yearInput.addEventListener("change", () => {
+      state.schoolYear = Number(yearInput.value) || defaultSchoolYear();
+      saveState();
+    });
+  }
+  const semSelect = document.getElementById("school-sem");
+  if (semSelect) {
+    semSelect.addEventListener("change", () => {
+      state.semester = Number(semSelect.value);
+      saveState();
+    });
+  }
+  const gradeInput = document.getElementById("school-grade");
+  if (gradeInput) {
+    gradeInput.addEventListener("change", () => {
+      state.grade = gradeInput.value.trim();
+      saveState();
+    });
+  }
+  const classInput = document.getElementById("school-class");
+  if (classInput) {
+    classInput.addEventListener("change", () => {
+      state.classNm = classInput.value.trim();
+      saveState();
+    });
+  }
 }
 
 async function doSchoolSearch() {
@@ -605,8 +760,9 @@ async function doSchoolSearch() {
         state.school = { officeCode: el.dataset.office, schoolCode: el.dataset.code, name: el.dataset.name };
         state.mealCache = {};
         saveState();
-        closeModal();
+        openSettingsModal();
         if (currentView === "home") renderHome();
+        if (currentView === "timetable") renderTimetable();
       })
     );
   } catch (err) {
