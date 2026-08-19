@@ -5,10 +5,11 @@
 const STORAGE_KEY = "diaryboard:v1";
 
 // 버그 신고 메일을 받을 주소 — 본인 이메일로 바꿔주세요.
-const BUG_REPORT_EMAIL = "your-email@example.com";
+const BUG_REPORT_EMAIL = "ARIA.myarea@gmail.com";
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const DOW_KEYS = ["mon", "tue", "wed", "thu", "fri"];
-const DOW_LABEL = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금" };
+const WEEK_DOW_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DOW_LABEL = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
 
 function todayStr(d = new Date()) {
   const y = d.getFullYear();
@@ -42,7 +43,7 @@ const defaultState = {
   semester: defaultSemester(),
   schoolYear: defaultSchoolYear(),
   periods: 7,
-  timetable: { mon: [], tue: [], wed: [], thu: [], fri: [] },
+  timetable: { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] },
   todos: [], // { id, text, done }
   events: [], // { id, date: 'YYYYMMDD', title }
   mealCache: {}, // ymd -> { 조식: '...', 중식: '...', 석식: '...' }
@@ -197,7 +198,11 @@ async function fetchTimetableWeek() {
     TI_TO_YMD: todayStr(friday)
   });
 
-  const next = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+  const next = {
+    mon: [], tue: [], wed: [], thu: [], fri: [],
+    sat: state.timetable.sat || [],
+    sun: state.timetable.sun || []
+  };
   let maxPeriod = state.periods;
 
   rows.forEach((r) => {
@@ -542,10 +547,10 @@ function renderTimetable() {
 function buildTimetableGrid() {
   const grid = document.getElementById("tt-grid");
   let html = `<div></div>`;
-  DOW_KEYS.forEach((k) => (html += `<div class="dow">${DOW_LABEL[k]}</div>`));
+  WEEK_DOW_KEYS.forEach((k) => (html += `<div class="dow ${k === "sun" ? "sun" : k === "sat" ? "sat" : ""}">${DOW_LABEL[k]}</div>`));
   for (let p = 0; p < state.periods; p++) {
     html += `<div class="pnum">${p + 1}</div>`;
-    DOW_KEYS.forEach((k) => {
+    WEEK_DOW_KEYS.forEach((k) => {
       const val = state.timetable[k][p] || "";
       html += `<div class="tt-cell"><input type="text" data-day="${k}" data-idx="${p}" value="${escapeAttr(val)}" /></div>`;
     });

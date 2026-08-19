@@ -275,20 +275,22 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
 }
 .tt-grid{
   display:grid;
-  grid-template-columns: 30px repeat(5, 1fr);
-  gap: 6px;
+  grid-template-columns: 22px repeat(7, 1fr);
+  gap: 4px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-l);
-  padding: 14px 10px;
+  padding: 14px 8px;
 }
 .tt-grid .dow{
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-align:center;
   color: var(--ink-soft);
   padding-bottom: 6px;
 }
+.tt-grid .dow.sun{ color: var(--danger); }
+.tt-grid .dow.sat{ color: var(--sat); }
 .tt-grid .pnum{
   font-size: 11px;
   color: var(--ink-faint);
@@ -298,10 +300,10 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
   width:100%;
   height: 44px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--surface-soft);
-  padding: 0 6px;
-  font-size: 12px;
+  padding: 0 3px;
+  font-size: 10.5px;
   color: var(--ink);
   text-align:center;
 }
@@ -435,7 +437,7 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
   display:flex; align-items:center; flex-shrink:0; white-space:nowrap;
 }
 .cal-nav button{
-  width:28px; height:28px; border-radius:50%; border:1px solid var(--line);
+  width:28px; height:28px; border-radius:50%; border: 1.5px solid var(--ink);
   background: var(--surface); cursor:pointer; font-size:14px; margin-left:6px;
   display:flex; align-items:center; justify-content:center; line-height:1; padding:0;
   flex-shrink:0;
