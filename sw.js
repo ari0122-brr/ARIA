@@ -1,4 +1,4 @@
-const CACHE_NAME = "aria-v3";
+const CACHE_NAME = "aria-v4";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -30,7 +30,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // NEIS API 등 외부 요청은 그대로 네트워크로
+  // NEIS API, 날씨 API 등 외부 요청은 그대로 네트워크로
   if (url.origin !== self.location.origin) {
     return;
   }

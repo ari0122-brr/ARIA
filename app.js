@@ -969,6 +969,17 @@ render();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // updateViaCache: "none" — 서비스워커 스크립트 자체를 브라우저 HTTP 캐시에
+    // 절대 태우지 않고, 매번 서버에서 새로 확인하도록 강제한다.
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
+  });
+
+  // 새 버전의 서비스워커가 활성화되어 '주인'이 바뀌는 순간,
+  // 열려 있던 페이지를 한 번 자동으로 새로고침해서 최신 파일을 반영한다.
+  let refreshedOnce = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshedOnce) return;
+    refreshedOnce = true;
+    window.location.reload();
   });
 }
