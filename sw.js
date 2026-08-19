@@ -1,4 +1,4 @@
-const CACHE_NAME = "aria-v2";
+const CACHE_NAME = "aria-v3";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -25,22 +25,23 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// 네트워크 우선: 온라인이면 항상 최신 파일을 받아오고,
+// 오프라인일 때만 저장된 캐시로 대체한다.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // NEIS API 등 외부 요청은 캐싱하지 않고 그대로 네트워크로
+  // NEIS API 등 외부 요청은 그대로 네트워크로
   if (url.origin !== self.location.origin) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((res) => {
+    fetch(event.request)
+      .then((res) => {
         const resClone = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
         return res;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

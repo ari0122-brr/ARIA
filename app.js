@@ -302,12 +302,23 @@ function renderTimetable() {
           <button id="p-plus">+</button>
         </div>
         <button class="tt-fetch-btn" id="tt-fetch">나이스로 불러오기</button>
+        <button class="mini-trash" id="tt-clear" title="시간표 모두 삭제"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
     <div class="tt-note">나이스 학급 시간표를 기준으로 불러와요. 선택과목 등으로 개인 시간표와 다를 수 있어 불러온 뒤 직접 칸을 눌러 수정할 수 있어요.</div>
     <div class="tt-grid" id="tt-grid"></div>
   `;
   buildTimetableGrid();
+
+  document.getElementById("tt-clear").onclick = () => {
+    const hasAny = Object.values(state.timetable).some((arr) => arr.some((s) => s && s.trim()));
+    if (!hasAny) return;
+    openConfirmModal("시간표 모두 삭제", "입력한 시간표 내용을 전부 지울까요? 되돌릴 수 없어요.", () => {
+      state.timetable = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+      saveState();
+      renderTimetable();
+    });
+  };
 
   document.getElementById("p-minus").onclick = () => {
     if (state.periods > 1) {
@@ -376,7 +387,10 @@ let newTodoColor = TODO_COLORS[0];
 function renderTodo() {
   const items = state.todos;
   viewEl.innerHTML = `
-    <div class="section-title" style="margin-top:8px"><i data-lucide="check-square" class="ti"></i>할일</div>
+    <div class="section-title-row">
+      <div class="section-title"><i data-lucide="check-square" class="ti"></i>할일</div>
+      <button class="mini-trash" id="todo-clear" title="할일 모두 삭제"><i data-lucide="trash-2"></i></button>
+    </div>
     <div class="add-row">
       <input id="todo-input" placeholder="할일을 입력하고 추가..." />
       <button class="add-btn" id="todo-add">+</button>
@@ -407,6 +421,14 @@ function renderTodo() {
   }
 
   document.getElementById("todo-add").onclick = addTodo;
+  document.getElementById("todo-clear").onclick = () => {
+    if (!state.todos.length) return;
+    openConfirmModal("할일 모두 삭제", "저장된 할일을 전부 삭제할까요? 되돌릴 수 없어요.", () => {
+      state.todos = [];
+      saveState();
+      renderTodo();
+    });
+  };
   document.getElementById("todo-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addTodo();
   });
@@ -476,6 +498,7 @@ function renderCalendar() {
       <div class="cal-nav">
         <button id="cal-prev">‹</button>
         <button id="cal-next">›</button>
+        <button class="mini-trash" id="cal-clear" title="모든 일정 삭제" style="margin-left:6px;"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
     <div class="cal-grid">
@@ -499,6 +522,14 @@ function renderCalendar() {
   document.getElementById("cal-next").onclick = () => {
     calCursor = new Date(y, m + 1, 1);
     renderCalendar();
+  };
+  document.getElementById("cal-clear").onclick = () => {
+    if (!state.events.length) return;
+    openConfirmModal("모든 일정 삭제", "캘린더에 등록된 모든 날짜의 일정을 전부 삭제할까요? 되돌릴 수 없어요.", () => {
+      state.events = [];
+      saveState();
+      renderCalendar();
+    });
   };
   viewEl.querySelectorAll(".cal-day:not(.blank)").forEach((el) =>
     el.addEventListener("click", () => {
@@ -716,6 +747,31 @@ async function doSchoolSearch() {
 
 function closeModal() {
   document.getElementById("modal-root").innerHTML = "";
+}
+
+function openConfirmModal(title, message, onConfirm) {
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `
+    <div class="modal-overlay" id="confirm-overlay">
+      <div class="modal-sheet">
+        <div class="close-row"><button id="confirm-close">×</button></div>
+        <h2>${escapeHtml(title)}</h2>
+        <p class="modal-sub">${escapeHtml(message)}</p>
+        <button class="btn-primary btn-danger" id="confirm-yes">삭제할게요</button>
+        <button class="btn-secondary" id="confirm-no">취소</button>
+      </div>
+    </div>
+  `;
+  const overlay = document.getElementById("confirm-overlay");
+  overlay.addEventListener("click", (e) => {
+    if (e.target.id === "confirm-overlay") closeModal();
+  });
+  document.getElementById("confirm-close").onclick = closeModal;
+  document.getElementById("confirm-no").onclick = closeModal;
+  document.getElementById("confirm-yes").onclick = () => {
+    closeModal();
+    onConfirm();
+  };
 }
 
 /* ---------- 유틸 ---------- */
