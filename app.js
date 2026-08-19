@@ -3,6 +3,9 @@
    =========================================================== */
 
 const STORAGE_KEY = "diaryboard:v1";
+
+// 버그 신고 메일을 받을 주소 — 본인 이메일로 바꿔주세요.
+const BUG_REPORT_EMAIL = "your-email@example.com";
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const DOW_KEYS = ["mon", "tue", "wed", "thu", "fri"];
 const DOW_LABEL = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금" };
@@ -873,33 +876,44 @@ function openSettingsModal() {
         ${
           state.school
             ? `
-        <div class="field-row" style="margin-top:16px;">
-          <div class="field">
-            <label>학년도</label>
-            <input id="school-year" type="number" value="${escapeAttr(state.schoolYear)}" />
+        <p class="modal-sub" style="margin-top:16px;">학년·반 정보 <button class="link-btn" id="grade-toggle">펼쳐서 입력하기</button></p>
+        <div id="grade-fields" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>학년도</label>
+              <input id="school-year" type="number" value="${escapeAttr(state.schoolYear)}" />
+            </div>
+            <div class="field">
+              <label>학기</label>
+              <select id="school-sem">
+                <option value="1" ${state.semester === 1 ? "selected" : ""}>1학기</option>
+                <option value="2" ${state.semester === 2 ? "selected" : ""}>2학기</option>
+              </select>
+            </div>
           </div>
-          <div class="field">
-            <label>학기</label>
-            <select id="school-sem">
-              <option value="1" ${state.semester === 1 ? "selected" : ""}>1학기</option>
-              <option value="2" ${state.semester === 2 ? "selected" : ""}>2학기</option>
-            </select>
+          <div class="field-row">
+            <div class="field">
+              <label>학년</label>
+              <input id="school-grade" placeholder="예: 2" value="${escapeAttr(state.grade)}" />
+            </div>
+            <div class="field">
+              <label>반</label>
+              <input id="school-class" placeholder="예: 5" value="${escapeAttr(state.classNm)}" />
+            </div>
           </div>
+          <div class="field-hint" style="margin-bottom:6px;">학년/반은 '시간표' 탭에서 나이스 시간표를 자동으로 불러올 때 쓰여요.</div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>학년</label>
-            <input id="school-grade" placeholder="예: 2" value="${escapeAttr(state.grade)}" />
-          </div>
-          <div class="field">
-            <label>반</label>
-            <input id="school-class" placeholder="예: 5" value="${escapeAttr(state.classNm)}" />
-          </div>
-        </div>
-        <div class="field-hint" style="margin-bottom:6px;">학년/반은 '시간표' 탭에서 나이스 시간표를 자동으로 불러올 때 쓰여요.</div>
         `
             : ""
         }
+
+        <h2>버그 신고</h2>
+        <p class="modal-sub">이상한 점이나 오류를 발견하면 알려주세요. 이메일 앱이 열리면서 바로 보낼 수 있어요.</p>
+        <div class="field">
+          <label>어떤 문제가 있었나요?</label>
+          <textarea id="bug-text" rows="4" placeholder="예: 캘린더에서 날짜를 눌러도 반응이 없어요"></textarea>
+        </div>
+        <button class="btn-secondary" id="bug-send">이메일로 보내기</button>
       </div>
     </div>
   `;
@@ -922,6 +936,32 @@ function openSettingsModal() {
     const show = el.style.display === "none";
     el.style.display = show ? "block" : "none";
     document.getElementById("guide-toggle").textContent = show ? "접기" : "발급 방법 보기";
+  };
+
+  const gradeToggle = document.getElementById("grade-toggle");
+  if (gradeToggle) {
+    gradeToggle.onclick = () => {
+      const el = document.getElementById("grade-fields");
+      const show = el.style.display === "none";
+      el.style.display = show ? "block" : "none";
+      gradeToggle.textContent = show ? "접기" : "펼쳐서 입력하기";
+    };
+  }
+
+  document.getElementById("bug-send").onclick = () => {
+    const desc = document.getElementById("bug-text").value.trim();
+    const info = [
+      `설명: ${desc || "(작성 안 함)"}`,
+      ``,
+      `--- 자동 수집 정보 ---`,
+      `기기/브라우저: ${navigator.userAgent}`,
+      `화면 크기: ${window.innerWidth}x${window.innerHeight}`,
+      `학교 연결됨: ${state.school ? "예 (" + state.school.name + ")" : "아니오"}`,
+      `다크모드: ${state.darkMode ? "켜짐" : "꺼짐"}`
+    ].join("\n");
+    const subject = encodeURIComponent("[ARIA] 버그 신고");
+    const body = encodeURIComponent(info);
+    window.location.href = `mailto:${BUG_REPORT_EMAIL}?subject=${subject}&body=${body}`;
   };
 
   const keyInput = document.getElementById("neis-key");

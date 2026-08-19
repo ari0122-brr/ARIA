@@ -439,6 +439,7 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
   background: var(--surface); cursor:pointer; font-size:14px; margin-left:6px;
   display:flex; align-items:center; justify-content:center; line-height:1; padding:0;
   flex-shrink:0;
+  color: var(--ink);
 }
 .cal-grid{
   display:grid; grid-template-columns: repeat(7, 1fr);
@@ -595,9 +596,10 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
 
 .field{ margin-bottom: 14px; }
 .field label{ display:block; font-size: 12px; color: var(--ink-soft); margin-bottom:6px; font-weight:700; }
-.field input, .field select{
+.field input, .field select, .field textarea{
   width:100%; border:1px solid var(--line); background: var(--surface);
   border-radius: var(--radius-m); padding: 11px 13px; font-size:14px;
+  resize: vertical;
 }
 .field-row{ display:flex; gap:8px; }
 .field-row .field{ flex:1; }
