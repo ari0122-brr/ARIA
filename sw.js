@@ -1,4 +1,4 @@
-const CACHE_NAME = "aria-v4";
+const CACHE_NAME = "aria-v5";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -25,7 +25,8 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// 네트워크 우선: 온라인이면 항상 최신 파일을 받아오고,
+// 네트워크 우선 + HTTP 캐시 완전 무시: 온라인이면 항상 서버에서 진짜 최신 파일을
+// 받아오고 (cache: "no-store" 로 브라우저 HTTP 캐시 계층까지 건너뛴다),
 // 오프라인일 때만 저장된 캐시로 대체한다.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -36,7 +37,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-store" })
       .then((res) => {
         const resClone = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
