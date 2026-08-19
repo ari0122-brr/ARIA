@@ -50,7 +50,14 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(defaultState);
     const parsed = JSON.parse(raw);
-    return Object.assign(structuredClone(defaultState), parsed);
+    const merged = Object.assign(structuredClone(defaultState), parsed);
+    // 이전 버전의 급식 캐시(문자열 형식)가 남아있으면 제거
+    if (merged.mealCache) {
+      Object.keys(merged.mealCache).forEach((k) => {
+        if (typeof merged.mealCache[k] !== "object") delete merged.mealCache[k];
+      });
+    }
+    return merged;
   } catch (e) {
     return structuredClone(defaultState);
   }
@@ -134,7 +141,8 @@ async function searchSchools(name) {
 }
 
 async function fetchMeal(ymd) {
-  if (state.mealCache[ymd]) return state.mealCache[ymd];
+  const cached = state.mealCache[ymd];
+  if (cached && typeof cached === "object") return cached;
   if (!state.school) throw new Error("no-school");
   const rows = await neisFetch("mealServiceDietInfo", {
     ATPT_OFCDC_SC_CODE: state.school.officeCode,
@@ -362,6 +370,9 @@ function buildTimetableGrid() {
 /* ===========================================================
    할일
    =========================================================== */
+const TODO_COLORS = ["#8A8A87", "#C4554A", "#C98A3E", "#4C8065", "#4472C4", "#7C6FAE"];
+let newTodoColor = TODO_COLORS[0];
+
 function renderTodo() {
   const items = state.todos;
   viewEl.innerHTML = `
@@ -369,6 +380,11 @@ function renderTodo() {
     <div class="add-row">
       <input id="todo-input" placeholder="할일을 입력하고 추가..." />
       <button class="add-btn" id="todo-add">+</button>
+    </div>
+    <div class="color-row" id="todo-color-row">
+      ${TODO_COLORS.map(
+        (c) => `<button class="color-dot ${c === newTodoColor ? "active" : ""}" data-color="${c}" style="--dot:${c}"></button>`
+      ).join("")}
     </div>
     <div id="todo-list"></div>
   `;
@@ -381,7 +397,7 @@ function renderTodo() {
       .reverse()
       .map(
         (t) => `
-        <div class="todo-item ${t.done ? "done" : ""}" data-id="${t.id}">
+        <div class="todo-item ${t.done ? "done" : ""}" data-id="${t.id}" style="border-left-color:${t.color || "var(--line)"}">
           <button class="todo-check">${t.done ? "✓" : ""}</button>
           <div class="todo-text">${escapeHtml(t.text)}</div>
           <button class="del-btn">✕</button>
@@ -394,6 +410,12 @@ function renderTodo() {
   document.getElementById("todo-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addTodo();
   });
+  document.getElementById("todo-color-row").querySelectorAll(".color-dot").forEach((dot) =>
+    dot.addEventListener("click", () => {
+      newTodoColor = dot.dataset.color;
+      document.querySelectorAll("#todo-color-row .color-dot").forEach((d) => d.classList.toggle("active", d === dot));
+    })
+  );
   list.querySelectorAll(".todo-check").forEach((btn) =>
     btn.addEventListener("click", (e) => {
       const id = e.target.closest(".todo-item").dataset.id;
@@ -417,11 +439,12 @@ function addTodo() {
   const input = document.getElementById("todo-input");
   const text = input.value.trim();
   if (!text) return;
-  state.todos.push({ id: uid(), text, done: false });
+  state.todos.push({ id: uid(), text, done: false, color: newTodoColor });
   saveState();
   input.value = "";
   renderTodo();
 }
+
 
 /* ===========================================================
    캘린더
@@ -438,7 +461,10 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const ymd = `${y}${String(m + 1).padStart(2, "0")}${String(d).padStart(2, "0")}`;
     const hasEvent = state.events.some((ev) => ev.date === ymd);
+    const wd = new Date(y, m, d).getDay();
     const cls = ["cal-day"];
+    if (wd === 0) cls.push("sun");
+    if (wd === 6) cls.push("sat");
     if (ymd === todayYmd) cls.push("today");
     if (ymd === calSelected) cls.push("selected");
     cells += `<div class="${cls.join(" ")}" data-ymd="${ymd}">${d}${hasEvent ? '<div class="dot"></div>' : ""}</div>`;
@@ -453,7 +479,7 @@ function renderCalendar() {
       </div>
     </div>
     <div class="cal-grid">
-      ${DOW.map((d) => `<div class="dow">${d}</div>`).join("")}
+      ${DOW.map((d, i) => `<div class="dow ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${d}</div>`).join("")}
       ${cells}
     </div>
     <div class="day-panel">
