@@ -221,10 +221,36 @@ async function fetchTimetableWeek() {
 /* ===========================================================
    홈 (추후 채울 예정 — 지금은 비워둠)
    =========================================================== */
+const DAILY_QUESTIONS = [
+  "오늘 하루 중 가장 기억에 남는 순간은?",
+  "오늘 나를 웃게 한 일이 있다면?",
+  "지금 가장 하고 싶은 게 뭐야?",
+  "오늘 감사한 일 한 가지를 꼽는다면?",
+  "요즘 제일 신경 쓰이는 건 뭐야?",
+  "오늘 스스로를 칭찬한다면 어떤 점?",
+  "내일의 나에게 하고 싶은 말은?",
+  "요즘 자주 떠오르는 생각은?",
+  "오늘 컨디션을 한 단어로 표현한다면?",
+  "최근에 새로 알게 된 거 하나는?",
+  "오늘 누군가에게 고마웠던 순간은?",
+  "요즘 가장 듣고 싶은 말은?",
+  "오늘 제일 잘한 선택은 뭐였어?",
+  "지금 기분을 날씨로 비유하면?",
+  "이번 주말에 하고 싶은 건?",
+  "요즘 무슨 노래를 제일 많이 들어?",
+  "오늘 하루를 다시 산다면 뭘 바꾸고 싶어?",
+  "지금 가장 응원받고 싶은 부분은?"
+];
+
 function renderHome() {
+  const question = DAILY_QUESTIONS[Math.floor(Math.random() * DAILY_QUESTIONS.length)];
   viewEl.innerHTML = `
+    <div class="section-title"><i data-lucide="sparkles" class="ti"></i>오늘의 질문</div>
+    <div class="question-card">${escapeHtml(question)}</div>
+
     <div class="section-title"><i data-lucide="cloud-sun" class="ti"></i>오늘 날씨</div>
     <div id="weather-slot"></div>
+    <div class="tt-note">날씨 정보 제공: Open-Meteo (open-meteo.com)</div>
   `;
   renderWeatherSlot();
 }

@@ -59,6 +59,7 @@ input, textarea, select{ font-family: inherit; }
   display: flex;
   flex-direction: column;
   position: relative;
+  padding-top: env(safe-area-inset-top);
 }
 
 /* ===== 상단바 ===== */
@@ -377,6 +378,18 @@ input, textarea, select{ font-family: inherit; }
 }
 .del-btn:hover{ color: var(--danger); }
 
+/* ===== 오늘의 질문 ===== */
+.question-card{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: 20px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: var(--shadow-card);
+}
+
 /* ===== 오늘의 날씨 ===== */
 .weather-card{ padding: 22px 20px 20px; }
 .weather-row{
@@ -412,13 +425,18 @@ input, textarea, select{ font-family: inherit; }
 /* ===== 캘린더 ===== */
 .cal-head{
   display:flex; align-items:center; justify-content:space-between;
+  gap: 10px;
   margin: 6px 0 14px;
 }
-.cal-head h2{ font-size:15.5px; margin:0; font-weight:800; }
+.cal-head h2{ font-size:15.5px; margin:0; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-nav{
+  display:flex; align-items:center; flex-shrink:0; white-space:nowrap;
+}
 .cal-nav button{
   width:28px; height:28px; border-radius:50%; border:1px solid var(--line);
   background: var(--surface); cursor:pointer; font-size:14px; margin-left:6px;
   display:flex; align-items:center; justify-content:center; line-height:1; padding:0;
+  flex-shrink:0;
 }
 .cal-grid{
   display:grid; grid-template-columns: repeat(7, 1fr);
