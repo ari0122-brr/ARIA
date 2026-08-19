@@ -107,9 +107,13 @@ input, textarea, select{ font-family: inherit; }
 /* ===== 뷰 영역 ===== */
 .view{
   flex: 1;
-  padding: 4px 20px 100px;
+  padding: 10px 20px 100px;
   animation: fadeIn .16s ease;
 }
+/* 페이지마다 첫 요소의 마진이 제각각이라 탭을 넘길 때 시작 위치가 미세하게
+   흔들리는 걸 막기 위해, 첫 요소의 위쪽 여백은 항상 0으로 고정하고
+   .view의 padding-top만으로 시작 위치를 통일한다. */
+.view > *:first-child{ margin-top: 0 !important; }
 @keyframes fadeIn{ from{ opacity:0; transform: translateY(3px);} to{ opacity:1; transform:none; } }
 
 .section-title{
@@ -263,7 +267,7 @@ input, textarea, select{ font-family: inherit; }
 .tt-note{
   font-size: 11.5px;
   color: var(--ink-faint);
-  margin: -4px 0 14px;
+  margin: -2px 0 14px;
   line-height: 1.6;
 }
 .tt-grid{

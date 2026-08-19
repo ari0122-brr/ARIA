@@ -86,6 +86,7 @@ tabbar.addEventListener("click", (e) => {
 function navigate(view) {
   currentView = view;
   render();
+  window.scrollTo(0, 0);
 }
 
 document.getElementById("settings-btn").addEventListener("click", openSettingsModal);
@@ -373,10 +374,21 @@ function showWeatherPrompt() {
 /* ===========================================================
    급식
    =========================================================== */
+function mealTargetDate() {
+  // 오후 6시 30분이 지나면 내일 급식을 보여준다
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setHours(18, 30, 0, 0);
+  const target = new Date(now);
+  if (now >= cutoff) target.setDate(target.getDate() + 1);
+  return { ymd: todayStr(target), isTomorrow: now >= cutoff };
+}
+
 function renderMeal() {
-  const ymd = todayStr();
+  const { ymd, isTomorrow } = mealTargetDate();
   viewEl.innerHTML = `
-    <div class="section-title"><i data-lucide="utensils" class="ti"></i>오늘의 급식</div>
+    <div class="section-title"><i data-lucide="utensils" class="ti"></i>${isTomorrow ? "내일의 급식" : "오늘의 급식"}</div>
+    <div class="tt-note">오후 6시 30분이 지나면 자동으로 다음 날 급식으로 넘어가요.</div>
     <div id="meal-slot"></div>
   `;
   renderMealSlot(ymd);
