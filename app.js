@@ -42,7 +42,9 @@ const defaultState = {
   timetable: { mon: [], tue: [], wed: [], thu: [], fri: [] },
   todos: [], // { id, text, done }
   events: [], // { id, date: 'YYYYMMDD', title }
-  mealCache: {} // ymd -> { 조식: '...', 중식: '...', 석식: '...' }
+  mealCache: {}, // ymd -> { 조식: '...', 중식: '...', 석식: '...' }
+  weatherCache: null, // { lat, lon, data, ts }
+  darkMode: false
 };
 
 function loadState() {
@@ -253,11 +255,69 @@ function weatherInfo(code) {
   return WEATHER_INFO[code] || { label: "-", icon: "cloud" };
 }
 
+const WEATHER_STALE_MS = 15 * 60 * 1000; // 15분
+
 async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("weather-network");
   return res.json();
+}
+
+function weatherCardHtml(data) {
+  const info = weatherInfo(data.current.weather_code);
+  const temp = Math.round(data.current.temperature_2m);
+  const feels = Math.round(data.current.apparent_temperature);
+  const hi = Math.round(data.daily.temperature_2m_max[0]);
+  const lo = Math.round(data.daily.temperature_2m_min[0]);
+  const humidity = Math.round(data.current.relative_humidity_2m);
+  const wind = Math.round(data.current.wind_speed_10m);
+  return `
+    <div class="meal-card weather-card">
+      <div class="weather-row">
+        <i data-lucide="${info.icon}" class="weather-icon"></i>
+        <div>
+          <div class="weather-temp">${temp}°</div>
+          <div class="weather-label">${info.label} · 체감 ${feels}°</div>
+        </div>
+      </div>
+      <div class="weather-stats">
+        <div class="weather-stat"><i data-lucide="arrow-up" class="ti"></i>최고 ${hi}°</div>
+        <div class="weather-stat"><i data-lucide="arrow-down" class="ti"></i>최저 ${lo}°</div>
+        <div class="weather-stat"><i data-lucide="droplets" class="ti"></i>습도 ${humidity}%</div>
+        <div class="weather-stat"><i data-lucide="wind" class="ti"></i>바람 ${wind}km/h</div>
+      </div>
+    </div>`;
+}
+
+function getAndCacheWeather(silent) {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      fetchWeather(latitude, longitude)
+        .then((data) => {
+          state.weatherCache = { lat: latitude, lon: longitude, data, ts: Date.now() };
+          saveState();
+          const slot = document.getElementById("weather-slot");
+          if (slot) {
+            slot.innerHTML = weatherCardHtml(data);
+            initIcons();
+          }
+        })
+        .catch(() => {
+          if (!silent) {
+            const body = document.getElementById("weather-body");
+            if (body) body.textContent = "날씨 정보를 가져오지 못했어요.";
+          }
+        });
+    },
+    () => {
+      if (!silent) {
+        const body = document.getElementById("weather-body");
+        if (body) body.textContent = "위치 접근이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해주세요.";
+      }
+    }
+  );
 }
 
 function renderWeatherSlot() {
@@ -266,43 +326,47 @@ function renderWeatherSlot() {
     slot.innerHTML = `<div class="meal-card"><div class="meal-empty">이 브라우저에서는 위치 정보를 가져올 수 없어요.</div></div>`;
     return;
   }
+
+  const cache = state.weatherCache;
+  if (cache) {
+    // 캐시가 있으면 즉시 보여주고, 오래됐으면 조용히 새로고침
+    slot.innerHTML = weatherCardHtml(cache.data);
+    initIcons();
+    if (Date.now() - cache.ts > WEATHER_STALE_MS) {
+      getAndCacheWeather(true);
+    }
+    return;
+  }
+
+  // 처음이면 권한 상태를 먼저 조용히 확인해서, 이미 허용돼 있으면 바로 불러온다
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions
+      .query({ name: "geolocation" })
+      .then((status) => {
+        if (status.state === "granted") {
+          slot.innerHTML = `<div class="meal-card"><div class="meal-empty" id="weather-body">날씨를 불러오는 중…</div></div>`;
+          getAndCacheWeather(false);
+        } else {
+          showWeatherPrompt();
+        }
+      })
+      .catch(showWeatherPrompt);
+  } else {
+    showWeatherPrompt();
+  }
+}
+
+function showWeatherPrompt() {
+  const slot = document.getElementById("weather-slot");
+  if (!slot) return;
   slot.innerHTML = `
     <div class="meal-card">
       <div class="meal-empty" id="weather-body">날씨를 가져오려면 위치 접근을 허용해주세요.</div>
       <button id="weather-allow">위치 허용하고 날씨 보기</button>
     </div>`;
   document.getElementById("weather-allow").onclick = () => {
-    const body = document.getElementById("weather-body");
-    body.textContent = "위치 확인 중…";
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        body.textContent = "날씨를 불러오는 중…";
-        fetchWeather(pos.coords.latitude, pos.coords.longitude)
-          .then((data) => {
-            const info = weatherInfo(data.current.weather_code);
-            const temp = Math.round(data.current.temperature_2m);
-            const hi = Math.round(data.daily.temperature_2m_max[0]);
-            const lo = Math.round(data.daily.temperature_2m_min[0]);
-            document.getElementById("weather-slot").innerHTML = `
-              <div class="meal-card">
-                <div class="weather-row">
-                  <i data-lucide="${info.icon}" class="weather-icon"></i>
-                  <div>
-                    <div class="weather-temp">${temp}°</div>
-                    <div class="weather-label">${info.label} · 최고 ${hi}° / 최저 ${lo}°</div>
-                  </div>
-                </div>
-              </div>`;
-            initIcons();
-          })
-          .catch(() => {
-            body.textContent = "날씨 정보를 가져오지 못했어요.";
-          });
-      },
-      () => {
-        body.textContent = "위치 접근이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해주세요.";
-      }
-    );
+    document.getElementById("weather-body").textContent = "위치 확인 중…";
+    getAndCacheWeather(false);
   };
 }
 
@@ -667,6 +731,13 @@ function openSettingsModal() {
         <div class="close-row"><button id="modal-close">×</button></div>
         <h2>설정</h2>
 
+        <div class="switch-row">
+          <div class="switch-row-label"><i data-lucide="moon" class="ti"></i>다크 모드</div>
+          <button class="switch ${state.darkMode ? "on" : ""}" id="dark-toggle" role="switch" aria-checked="${state.darkMode}">
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+
         <div class="guide-box" style="display:flex; gap:10px; align-items:flex-start;">
           <i data-lucide="info" style="width:16px; height:16px; color:var(--ink-faint); flex-shrink:0; margin-top:1px;"></i>
           <p style="margin:0; font-size:12px; color:var(--ink-soft); line-height:1.7;">
@@ -675,9 +746,9 @@ function openSettingsModal() {
         </div>
 
         <h2>학교 연결</h2>
-        <p class="modal-sub">급식과 시간표를 자동으로 불러오려면 나이스(NEIS) 인증키와 학교 정보가 필요해요.</p>
+        <p class="modal-sub">급식과 시간표를 자동으로 불러오려면 나이스(NEIS) 인증키와 학교 정보가 필요해요. <button class="link-btn" id="guide-toggle">발급 방법 보기</button></p>
 
-        <div class="guide-box">
+        <div class="guide-box" id="neis-guide" style="display:none;">
           <ol>
             <li><a href="https://open.neis.go.kr/portal/mainPage.do" target="_blank" rel="noopener">open.neis.go.kr</a> 접속 후 회원가입 · 로그인</li>
             <li>상단 메뉴에서 <b>오픈API활용 → 활용신청</b> 이동</li>
@@ -741,6 +812,21 @@ function openSettingsModal() {
   document.getElementById("modal-overlay").addEventListener("click", (e) => {
     if (e.target.id === "modal-overlay") closeModal();
   });
+
+  document.getElementById("dark-toggle").onclick = (e) => {
+    state.darkMode = !state.darkMode;
+    saveState();
+    applyTheme();
+    e.currentTarget.classList.toggle("on", state.darkMode);
+    e.currentTarget.setAttribute("aria-checked", state.darkMode);
+  };
+
+  document.getElementById("guide-toggle").onclick = () => {
+    const el = document.getElementById("neis-guide");
+    const show = el.style.display === "none";
+    el.style.display = show ? "block" : "none";
+    document.getElementById("guide-toggle").textContent = show ? "접기" : "발급 방법 보기";
+  };
 
   const keyInput = document.getElementById("neis-key");
   keyInput.addEventListener("change", () => {
@@ -871,7 +957,14 @@ function escapeAttr(str) {
   return escapeHtml(str);
 }
 
+function applyTheme() {
+  document.documentElement.setAttribute("data-theme", state.darkMode ? "dark" : "light");
+  const meta = document.getElementById("theme-color-meta");
+  if (meta) meta.setAttribute("content", state.darkMode ? "#18191B" : "#FFFFFF");
+}
+
 /* ---------- 초기화 ---------- */
+applyTheme();
 render();
 
 if ("serviceWorker" in navigator) {
