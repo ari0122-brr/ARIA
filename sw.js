@@ -1,4 +1,4 @@
-const CACHE_NAME = "aria-v5";
+const CACHE_NAME = "aria-v6";
 const CORE_ASSETS = [
   "./",
   "./index.html",

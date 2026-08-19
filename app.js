@@ -563,7 +563,7 @@ function buildTimetableGrid() {
 /* ===========================================================
    할일
    =========================================================== */
-const TODO_COLORS = ["#8A8A87", "#C4554A", "#C98A3E", "#4C8065", "#4472C4", "#7C6FAE"];
+const TODO_COLORS = ["#E15B4F", "#E08D3C", "#E8C547", "#4C8065", "#4472C4", "#D97CA0", "#FFFFFF", "#7C6FAE"];
 let newTodoColor = TODO_COLORS[0];
 
 function renderTodo() {
@@ -653,6 +653,59 @@ function addTodo() {
 /* ===========================================================
    캘린더
    =========================================================== */
+/* ===========================================================
+   대한민국 공휴일 (대체공휴일 포함) — 2026, 2027년
+   출처: 공공데이터포털 특일 정보 기준 정리
+   =========================================================== */
+const HOLIDAYS = {
+  "20260101": "신정",
+  "20260216": "설날 연휴",
+  "20260217": "설날",
+  "20260218": "설날 연휴",
+  "20260301": "삼일절",
+  "20260302": "대체공휴일(삼일절)",
+  "20260501": "노동절",
+  "20260505": "어린이날",
+  "20260524": "부처님오신날",
+  "20260525": "대체공휴일(부처님오신날)",
+  "20260603": "전국동시지방선거",
+  "20260606": "현충일",
+  "20260717": "제헌절",
+  "20260815": "광복절",
+  "20260817": "대체공휴일(광복절)",
+  "20260924": "추석 연휴",
+  "20260925": "추석",
+  "20260926": "추석 연휴",
+  "20261003": "개천절",
+  "20261005": "대체공휴일(개천절)",
+  "20261009": "한글날",
+  "20261225": "성탄절",
+  "20270101": "신정",
+  "20270206": "설날 연휴",
+  "20270207": "설날",
+  "20270208": "설날 연휴",
+  "20270209": "대체공휴일(설날)",
+  "20270301": "삼일절",
+  "20270501": "노동절",
+  "20270503": "대체공휴일(노동절)",
+  "20270505": "어린이날",
+  "20270513": "부처님오신날",
+  "20270606": "현충일",
+  "20270717": "제헌절",
+  "20270719": "대체공휴일(제헌절)",
+  "20270815": "광복절",
+  "20270816": "대체공휴일(광복절)",
+  "20270914": "추석 연휴",
+  "20270915": "추석",
+  "20270916": "추석 연휴",
+  "20271003": "개천절",
+  "20271004": "대체공휴일(개천절)",
+  "20271009": "한글날",
+  "20271011": "대체공휴일(한글날)",
+  "20271225": "성탄절",
+  "20271227": "대체공휴일(성탄절)"
+};
+
 function renderCalendar() {
   const y = calCursor.getFullYear();
   const m = calCursor.getMonth();
@@ -666,9 +719,11 @@ function renderCalendar() {
     const ymd = `${y}${String(m + 1).padStart(2, "0")}${String(d).padStart(2, "0")}`;
     const hasEvent = state.events.some((ev) => ev.date === ymd);
     const wd = new Date(y, m, d).getDay();
+    const isHoliday = !!HOLIDAYS[ymd];
     const cls = ["cal-day"];
-    if (wd === 0) cls.push("sun");
-    if (wd === 6) cls.push("sat");
+    if (isHoliday) cls.push("holiday");
+    else if (wd === 0) cls.push("sun");
+    else if (wd === 6) cls.push("sat");
     if (ymd === todayYmd) cls.push("today");
     if (ymd === calSelected) cls.push("selected");
     cells += `<div class="${cls.join(" ")}" data-ymd="${ymd}">${d}${hasEvent ? '<div class="dot"></div>' : ""}</div>`;
@@ -730,7 +785,10 @@ function renderCalendar() {
 
 function renderDayPanel() {
   const title = document.getElementById("day-panel-title");
-  title.textContent = `${fmtYmd(calSelected)} 일정`;
+  const holidayName = HOLIDAYS[calSelected];
+  title.innerHTML = `${fmtYmd(calSelected)} 일정${
+    holidayName ? `<span class="holiday-badge"><i data-lucide="flag" class="ti"></i>${escapeHtml(holidayName)}</span>` : ""
+  }`;
   const list = document.getElementById("event-list");
   const evs = state.events.filter((e) => e.date === calSelected);
   if (!evs.length) {
