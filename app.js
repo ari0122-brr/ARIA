@@ -220,10 +220,90 @@ async function fetchTimetableWeek() {
    =========================================================== */
 function renderHome() {
   viewEl.innerHTML = `
-    <div class="empty-hint" style="padding-top:40px; text-align:center;">
-      아직 채워지지 않았어요.
-    </div>
+    <div class="section-title"><i data-lucide="cloud-sun" class="ti"></i>오늘 날씨</div>
+    <div id="weather-slot"></div>
   `;
+  renderWeatherSlot();
+}
+
+const WEATHER_INFO = {
+  0: { label: "맑음", icon: "sun" },
+  1: { label: "대체로 맑음", icon: "cloud-sun" },
+  2: { label: "구름 조금", icon: "cloud-sun" },
+  3: { label: "흐림", icon: "cloud" },
+  45: { label: "안개", icon: "cloud-fog" },
+  48: { label: "안개", icon: "cloud-fog" },
+  51: { label: "이슬비", icon: "cloud-drizzle" },
+  53: { label: "이슬비", icon: "cloud-drizzle" },
+  55: { label: "이슬비", icon: "cloud-drizzle" },
+  61: { label: "비", icon: "cloud-rain" },
+  63: { label: "비", icon: "cloud-rain" },
+  65: { label: "강한 비", icon: "cloud-rain" },
+  71: { label: "눈", icon: "snowflake" },
+  73: { label: "눈", icon: "snowflake" },
+  75: { label: "강한 눈", icon: "snowflake" },
+  80: { label: "소나기", icon: "cloud-rain-wind" },
+  81: { label: "소나기", icon: "cloud-rain-wind" },
+  82: { label: "강한 소나기", icon: "cloud-rain-wind" },
+  95: { label: "뇌우", icon: "cloud-lightning" },
+  96: { label: "뇌우", icon: "cloud-lightning" },
+  99: { label: "뇌우", icon: "cloud-lightning" }
+};
+function weatherInfo(code) {
+  return WEATHER_INFO[code] || { label: "-", icon: "cloud" };
+}
+
+async function fetchWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("weather-network");
+  return res.json();
+}
+
+function renderWeatherSlot() {
+  const slot = document.getElementById("weather-slot");
+  if (!("geolocation" in navigator)) {
+    slot.innerHTML = `<div class="meal-card"><div class="meal-empty">이 브라우저에서는 위치 정보를 가져올 수 없어요.</div></div>`;
+    return;
+  }
+  slot.innerHTML = `
+    <div class="meal-card">
+      <div class="meal-empty" id="weather-body">날씨를 가져오려면 위치 접근을 허용해주세요.</div>
+      <button id="weather-allow">위치 허용하고 날씨 보기</button>
+    </div>`;
+  document.getElementById("weather-allow").onclick = () => {
+    const body = document.getElementById("weather-body");
+    body.textContent = "위치 확인 중…";
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        body.textContent = "날씨를 불러오는 중…";
+        fetchWeather(pos.coords.latitude, pos.coords.longitude)
+          .then((data) => {
+            const info = weatherInfo(data.current.weather_code);
+            const temp = Math.round(data.current.temperature_2m);
+            const hi = Math.round(data.daily.temperature_2m_max[0]);
+            const lo = Math.round(data.daily.temperature_2m_min[0]);
+            document.getElementById("weather-slot").innerHTML = `
+              <div class="meal-card">
+                <div class="weather-row">
+                  <i data-lucide="${info.icon}" class="weather-icon"></i>
+                  <div>
+                    <div class="weather-temp">${temp}°</div>
+                    <div class="weather-label">${info.label} · 최고 ${hi}° / 최저 ${lo}°</div>
+                  </div>
+                </div>
+              </div>`;
+            initIcons();
+          })
+          .catch(() => {
+            body.textContent = "날씨 정보를 가져오지 못했어요.";
+          });
+      },
+      () => {
+        body.textContent = "위치 접근이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해주세요.";
+      }
+    );
+  };
 }
 
 /* ===========================================================
@@ -585,6 +665,15 @@ function openSettingsModal() {
     <div class="modal-overlay" id="modal-overlay">
       <div class="modal-sheet">
         <div class="close-row"><button id="modal-close">×</button></div>
+        <h2>설정</h2>
+
+        <div class="guide-box" style="display:flex; gap:10px; align-items:flex-start;">
+          <i data-lucide="info" style="width:16px; height:16px; color:var(--ink-faint); flex-shrink:0; margin-top:1px;"></i>
+          <p style="margin:0; font-size:12px; color:var(--ink-soft); line-height:1.7;">
+            이 앱은 로그인 없이 <b>이 기기(브라우저)에만</b> 데이터를 저장해요. 앱을 지우거나 브라우저 저장공간을 정리하면 급식·시간표·할일·캘린더 내용이 함께 사라져요. 다른 기기에서 쓰려면 그 기기에서 처음부터 다시 설정해야 해요.
+          </p>
+        </div>
+
         <h2>학교 연결</h2>
         <p class="modal-sub">급식과 시간표를 자동으로 불러오려면 나이스(NEIS) 인증키와 학교 정보가 필요해요.</p>
 
