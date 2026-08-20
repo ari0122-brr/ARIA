@@ -382,6 +382,15 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
 }
 .del-btn:hover{ color: var(--danger); }
 
+/* 아이콘 전용 버튼(svg)이 inline 기본 정렬 때문에 미세하게 밀리는 걸 방지 */
+button svg{ display:block; }
+
+/* ===== 디데이 ===== */
+.dday-card{ text-align:center; padding: 24px 20px 22px; cursor:pointer; }
+.dday-label{ font-size: 13px; font-weight:700; color: var(--ink-soft); margin-bottom:8px; }
+.dday-count{ font-size: 40px; font-weight:800; letter-spacing:-0.02em; line-height:1; }
+.dday-date{ font-size: 11.5px; color: var(--ink-faint); margin-top:8px; }
+
 /* ===== 오늘의 질문 ===== */
 .question-card{
   background: var(--surface);

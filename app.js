@@ -52,7 +52,8 @@ const defaultState = {
   events: [], // { id, date: 'YYYYMMDD', title }
   mealCache: {}, // ymd -> { 조식: '...', 중식: '...', 석식: '...' }
   weatherCache: null, // { lat, lon, data, ts }
-  darkMode: false
+  darkMode: false,
+  dday: null // { date: 'YYYYMMDD', label: '기말고사' }
 };
 
 function loadState() {
@@ -259,9 +260,96 @@ const DAILY_QUESTIONS = [
   "지금 가장 응원받고 싶은 부분은?"
 ];
 
+function ymdToIso(ymd) {
+  return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
+}
+function isoToYmd(iso) {
+  return iso.replaceAll("-", "");
+}
+function ddayText(ymd) {
+  const target = new Date(ymdToIso(ymd));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return "D-DAY";
+  if (diff > 0) return `D-${diff}`;
+  return `D+${Math.abs(diff)}`;
+}
+
+function renderDdaySlot() {
+  const slot = document.getElementById("dday-slot");
+  if (!state.dday) {
+    slot.innerHTML = `
+      <div class="meal-card">
+        <div class="meal-empty">중요한 날짜를 등록하면 디데이를 보여드려요.</div>
+        <button id="dday-setup">디데이 등록하기</button>
+      </div>`;
+    document.getElementById("dday-setup").onclick = openDdayModal;
+    return;
+  }
+  slot.innerHTML = `
+    <div class="meal-card dday-card" id="dday-card">
+      <div class="dday-label">${escapeHtml(state.dday.label)}</div>
+      <div class="dday-count">${ddayText(state.dday.date)}</div>
+      <div class="dday-date">${fmtYmd(state.dday.date)}</div>
+    </div>`;
+  document.getElementById("dday-card").onclick = openDdayModal;
+}
+
+function openDdayModal() {
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-sheet">
+        <div class="close-row"><button id="modal-close">×</button></div>
+        <h2>디데이 설정</h2>
+        <div class="field">
+          <label>날짜</label>
+          <input type="date" id="dday-date-input" value="${state.dday ? ymdToIso(state.dday.date) : ""}" />
+        </div>
+        <div class="field">
+          <label>이름</label>
+          <input type="text" id="dday-label-input" placeholder="예: 기말고사" value="${state.dday ? escapeAttr(state.dday.label) : ""}" />
+        </div>
+        <button class="btn-primary" id="dday-save">저장</button>
+        ${state.dday ? `<button class="btn-secondary" id="dday-delete">삭제</button>` : ""}
+      </div>
+    </div>
+  `;
+  document.getElementById("modal-close").onclick = closeModal;
+  document.getElementById("modal-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "modal-overlay") closeModal();
+  });
+  document.getElementById("dday-save").onclick = () => {
+    const iso = document.getElementById("dday-date-input").value;
+    const label = document.getElementById("dday-label-input").value.trim();
+    if (!iso) {
+      alert("날짜를 선택해주세요.");
+      return;
+    }
+    state.dday = { date: isoToYmd(iso), label: label || "디데이" };
+    saveState();
+    closeModal();
+    if (currentView === "home") renderHome();
+  };
+  const delBtn = document.getElementById("dday-delete");
+  if (delBtn) {
+    delBtn.onclick = () => {
+      state.dday = null;
+      saveState();
+      closeModal();
+      if (currentView === "home") renderHome();
+    };
+  }
+}
+
 function renderHome() {
   const question = DAILY_QUESTIONS[Math.floor(Math.random() * DAILY_QUESTIONS.length)];
   viewEl.innerHTML = `
+    <div class="section-title"><i data-lucide="flag" class="ti"></i>디데이</div>
+    <div id="dday-slot"></div>
+
     <div class="section-title"><i data-lucide="sparkles" class="ti"></i>오늘의 질문</div>
     <div class="question-card">${escapeHtml(question)}</div>
 
@@ -269,7 +357,9 @@ function renderHome() {
     <div id="weather-slot"></div>
     <div class="tt-note">날씨 정보 제공: Open-Meteo (open-meteo.com)</div>
   `;
+  renderDdaySlot();
   renderWeatherSlot();
+  initIcons();
 }
 
 const WEATHER_INFO = {
