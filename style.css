@@ -443,6 +443,7 @@ input, textarea, select{ font-family: inherit; color: var(--ink); }
   flex-shrink:0;
   color: var(--ink);
 }
+.cal-nav button svg{ width:16px; height:16px; stroke-width: 2.75px; display:block; }
 .cal-grid{
   display:grid; grid-template-columns: repeat(7, 1fr);
   gap: 4px;

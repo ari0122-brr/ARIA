@@ -6,6 +6,10 @@ const STORAGE_KEY = "diaryboard:v1";
 
 // 버그 신고 메일을 받을 주소 — 본인 이메일로 바꿔주세요.
 const BUG_REPORT_EMAIL = "ARIA.myarea@gmail.com";
+// Formspree(formspree.io) 무료 계정에서 폼을 만들면 나오는 주소를 여기 넣으면,
+// 메일 앱을 열지 않고도 신고 내용(+사진)이 바로 전송돼요. 비워두면 예전처럼
+// 메일 앱을 여는 방식으로 대신 동작해요 (이 경우 사진 첨부는 안 돼요).
+const BUG_REPORT_FORM_ENDPOINT = "";
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const DOW_KEYS = ["mon", "tue", "wed", "thu", "fri"];
 const WEEK_DOW_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -57,6 +61,11 @@ function loadState() {
     if (!raw) return structuredClone(defaultState);
     const parsed = JSON.parse(raw);
     const merged = Object.assign(structuredClone(defaultState), parsed);
+    // 이전 버전 호환: timetable에 토/일 등 누락된 요일 키가 있으면 채워넣기
+    merged.timetable = Object.assign(
+      { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] },
+      merged.timetable || {}
+    );
     // 이전 버전의 급식 캐시(문자열 형식)가 남아있으면 제거
     if (merged.mealCache) {
       Object.keys(merged.mealCache).forEach((k) => {
@@ -504,7 +513,7 @@ function renderTimetable() {
     const hasAny = Object.values(state.timetable).some((arr) => arr.some((s) => s && s.trim()));
     if (!hasAny) return;
     openConfirmModal("시간표 모두 삭제", "입력한 시간표 내용을 전부 지울까요? 되돌릴 수 없어요.", () => {
-      state.timetable = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+      state.timetable = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
       saveState();
       renderTimetable();
     });
@@ -741,8 +750,8 @@ function renderCalendar() {
     <div class="cal-head">
       <h2>${y}년 ${m + 1}월</h2>
       <div class="cal-nav">
-        <button id="cal-prev">‹</button>
-        <button id="cal-next">›</button>
+        <button id="cal-prev"><i data-lucide="chevron-left"></i></button>
+        <button id="cal-next"><i data-lucide="chevron-right"></i></button>
         <button class="mini-trash" id="cal-clear" title="모든 일정 삭제" style="margin-left:6px;"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
@@ -913,12 +922,16 @@ function openSettingsModal() {
         }
 
         <h2>버그 신고</h2>
-        <p class="modal-sub">이상한 점이나 오류를 발견하면 알려주세요. 이메일 앱이 열리면서 바로 보낼 수 있어요.</p>
+        <p class="modal-sub">이상한 점이나 오류를 발견하면 알려주세요. 필요하면 사진도 같이 보낼 수 있어요.</p>
         <div class="field">
           <label>어떤 문제가 있었나요?</label>
           <textarea id="bug-text" rows="4" placeholder="예: 캘린더에서 날짜를 눌러도 반응이 없어요"></textarea>
         </div>
-        <button class="btn-secondary" id="bug-send">이메일로 보내기</button>
+        <div class="field">
+          <label>사진 (선택)</label>
+          <input type="file" id="bug-photo" accept="image/*" />
+        </div>
+        <button class="btn-secondary" id="bug-send">신고 보내기</button>
       </div>
     </div>
   `;
@@ -955,18 +968,18 @@ function openSettingsModal() {
 
   document.getElementById("bug-send").onclick = () => {
     const desc = document.getElementById("bug-text").value.trim();
-    const info = [
-      `설명: ${desc || "(작성 안 함)"}`,
-      ``,
-      `--- 자동 수집 정보 ---`,
-      `기기/브라우저: ${navigator.userAgent}`,
-      `화면 크기: ${window.innerWidth}x${window.innerHeight}`,
-      `학교 연결됨: ${state.school ? "예 (" + state.school.name + ")" : "아니오"}`,
-      `다크모드: ${state.darkMode ? "켜짐" : "꺼짐"}`
-    ].join("\n");
-    const subject = encodeURIComponent("[ARIA] 버그 신고");
-    const body = encodeURIComponent(info);
-    window.location.href = `mailto:${BUG_REPORT_EMAIL}?subject=${subject}&body=${body}`;
+    if (!desc) {
+      alert("어떤 문제인지 간단히 적어주세요.");
+      return;
+    }
+    const photoInput = document.getElementById("bug-photo");
+    const photoFile = photoInput && photoInput.files[0] ? photoInput.files[0] : null;
+    openConfirmModal(
+      "버그 신고 보내기",
+      "작성한 내용을 개발자에게 보낼까요?",
+      () => sendBugReport(desc, photoFile),
+      { confirmLabel: "보낼게요", danger: false }
+    );
   };
 
   const keyInput = document.getElementById("neis-key");
@@ -1065,7 +1078,59 @@ function closeModal() {
   document.getElementById("modal-root").innerHTML = "";
 }
 
-function openConfirmModal(title, message, onConfirm) {
+async function sendBugReport(desc, photoFile) {
+  const deviceInfo = {
+    ua: navigator.userAgent,
+    screen: `${window.innerWidth}x${window.innerHeight}`,
+    school: state.school ? state.school.name : "연결 안 됨",
+    darkMode: state.darkMode ? "켜짐" : "꺼짐"
+  };
+
+  if (!BUG_REPORT_FORM_ENDPOINT) {
+    // Formspree 연동 전: 메일 앱을 여는 방식으로 대체 (이 경우 사진은 첨부되지 않아요)
+    const info = [
+      `설명: ${desc}`,
+      ``,
+      `--- 자동 수집 정보 ---`,
+      `기기/브라우저: ${deviceInfo.ua}`,
+      `화면 크기: ${deviceInfo.screen}`,
+      `학교 연결: ${deviceInfo.school}`,
+      `다크모드: ${deviceInfo.darkMode}`
+    ].join("\n");
+    const subject = encodeURIComponent("[ARIA] 버그 신고");
+    const body = encodeURIComponent(info);
+    window.location.href = `mailto:${BUG_REPORT_EMAIL}?subject=${subject}&body=${body}`;
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append("message", desc);
+  fd.append("기기_브라우저", deviceInfo.ua);
+  fd.append("화면크기", deviceInfo.screen);
+  fd.append("학교연결", deviceInfo.school);
+  fd.append("다크모드", deviceInfo.darkMode);
+  if (photoFile) fd.append("photo", photoFile);
+
+  try {
+    const res = await fetch(BUG_REPORT_FORM_ENDPOINT, {
+      method: "POST",
+      body: fd,
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      alert("버그 신고를 보냈어요. 확인하고 반영할게요!");
+    } else {
+      alert("전송에 실패했어요. 잠시 후 다시 시도해주세요.");
+    }
+  } catch (e) {
+    alert("전송에 실패했어요. 인터넷 연결을 확인해주세요.");
+  }
+}
+
+function openConfirmModal(title, message, onConfirm, options) {
+  const opts = options || {};
+  const confirmLabel = opts.confirmLabel || "삭제할게요";
+  const danger = opts.danger !== false; // 기본은 위험(빨강) 스타일, 명시적으로 false면 일반 스타일
   const root = document.getElementById("modal-root");
   root.innerHTML = `
     <div class="modal-overlay" id="confirm-overlay">
@@ -1073,7 +1138,7 @@ function openConfirmModal(title, message, onConfirm) {
         <div class="close-row"><button id="confirm-close">×</button></div>
         <h2>${escapeHtml(title)}</h2>
         <p class="modal-sub">${escapeHtml(message)}</p>
-        <button class="btn-primary btn-danger" id="confirm-yes">삭제할게요</button>
+        <button class="btn-primary ${danger ? "btn-danger" : ""}" id="confirm-yes">${escapeHtml(confirmLabel)}</button>
         <button class="btn-secondary" id="confirm-no">취소</button>
       </div>
     </div>
