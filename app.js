@@ -9,7 +9,7 @@ const BUG_REPORT_EMAIL = "ARIA.myarea@gmail.com";
 // Formspree(formspree.io) 무료 계정에서 폼을 만들면 나오는 주소를 여기 넣으면,
 // 메일 앱을 열지 않고도 신고 내용(+사진)이 바로 전송돼요. 비워두면 예전처럼
 // 메일 앱을 여는 방식으로 대신 동작해요 (이 경우 사진 첨부는 안 돼요).
-const BUG_REPORT_FORM_ENDPOINT = "";
+const BUG_REPORT_FORM_ENDPOINT = "https://formspree.io/f/xkjwkedd";
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const DOW_KEYS = ["mon", "tue", "wed", "thu", "fri"];
 const WEEK_DOW_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -282,10 +282,14 @@ function renderDdaySlot() {
   if (!state.dday) {
     slot.innerHTML = `
       <div class="meal-card">
-        <div class="meal-empty">중요한 날짜를 등록하면 디데이를 보여드려요.</div>
-        <button id="dday-setup">디데이 등록하기</button>
+        <div class="empty-state">
+          <i data-lucide="flag" class="empty-state-icon"></i>
+          <p class="empty-state-text">중요한 날짜를 등록하면<br>디데이를 보여드려요.</p>
+          <button class="empty-state-btn" id="dday-setup"><i data-lucide="plus"></i>디데이 등록하기</button>
+        </div>
       </div>`;
     document.getElementById("dday-setup").onclick = openDdayModal;
+    initIcons();
     return;
   }
   slot.innerHTML = `
@@ -495,11 +499,15 @@ function showWeatherPrompt() {
   if (!slot) return;
   slot.innerHTML = `
     <div class="meal-card">
-      <div class="meal-empty" id="weather-body">날씨를 가져오려면 위치 접근을 허용해주세요.</div>
-      <button id="weather-allow">위치 허용하고 날씨 보기</button>
+      <div class="empty-state">
+        <i data-lucide="map-pin" class="empty-state-icon"></i>
+        <p class="empty-state-text" id="weather-body">날씨를 가져오려면<br>위치 접근을 허용해주세요.</p>
+        <button class="empty-state-btn" id="weather-allow"><i data-lucide="navigation"></i>위치 허용하고 보기</button>
+      </div>
     </div>`;
+  initIcons();
   document.getElementById("weather-allow").onclick = () => {
-    document.getElementById("weather-body").textContent = "위치 확인 중…";
+    document.getElementById("weather-body").innerHTML = "위치 확인 중…";
     getAndCacheWeather(false);
   };
 }
@@ -538,9 +546,10 @@ function renderMealSlot(ymd) {
   if (!state.school) {
     slot.innerHTML = `
       <div class="meal-card">
-        <div class="meal-card-head"><h2>급식 정보</h2><span>${fmtYmd(ymd)}</span></div>
-        <div class="meal-empty">학교가 아직 설정되지 않았어요.<br>설정에서 학교를 검색해 연결해보세요.
-        <div><button onclick="openSettingsModal()">학교 설정하기</button></div>
+        <div class="empty-state">
+          <i data-lucide="school" class="empty-state-icon"></i>
+          <p class="empty-state-text">학교가 아직 설정되지 않았어요.<br>설정에서 학교를 검색해 연결해보세요.</p>
+          <button class="empty-state-btn" onclick="openSettingsModal()"><i data-lucide="settings-2"></i>학교 설정하기</button>
         </div>
       </div>`;
     initIcons();
