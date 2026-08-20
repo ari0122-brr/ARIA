@@ -393,7 +393,7 @@ function weatherInfo(code) {
   return WEATHER_INFO[code] || { label: "-", icon: "cloud" };
 }
 
-const WEATHER_STALE_MS = 15 * 60 * 1000; // 15분
+const WEATHER_STALE_MS = 120 * 60 * 1000; // 2시간
 
 async function fetchWeather(lat, lon) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
@@ -592,7 +592,7 @@ function renderTimetable() {
   viewEl.innerHTML = `
     <div class="tt-toolbar">
       <div class="section-title" style="margin:0"><i data-lucide="calendar-clock" class="ti"></i>주간 시간표</div>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <div class="stepper">
           교시 수
           <button id="p-minus">−</button>
@@ -600,13 +600,30 @@ function renderTimetable() {
           <button id="p-plus">+</button>
         </div>
         <button class="tt-fetch-btn" id="tt-fetch">나이스로 불러오기</button>
+        <button class="tt-fetch-btn" id="tt-copy"><i data-lucide="clipboard-copy" style="width:12px;height:12px;margin-right:4px;"></i>위젯용 복사</button>
         <button class="mini-trash" id="tt-clear" title="시간표 모두 삭제"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
-    <div class="tt-note">나이스 학급 시간표를 기준으로 불러와요. 선택과목 등으로 개인 시간표와 다를 수 있어 불러온 뒤 직접 칸을 눌러 수정할 수 있어요.</div>
+    <div class="tt-note">나이스 학급 시간표를 기준으로 불러와요. 선택과목 등으로 개인 시간표와 다를 수 있어 불러온 뒤 직접 칸을 눌러 수정할 수 있어요. '위젯용 복사'는 아이패드 홈 화면 위젯(Scriptable)에 붙여넣을 수 있는 형태로 복사해줘요.</div>
     <div class="tt-grid" id="tt-grid"></div>
   `;
   buildTimetableGrid();
+  initIcons();
+
+  document.getElementById("tt-copy").onclick = async () => {
+    const btn = document.getElementById("tt-copy");
+    const text = timetableToScriptableText();
+    try {
+      await navigator.clipboard.writeText(text);
+      const original = btn.innerHTML;
+      btn.textContent = "복사됐어요!";
+      setTimeout(() => {
+        btn.innerHTML = original;
+      }, 1600);
+    } catch (e) {
+      alert("복사에 실패했어요. 기기의 클립보드 권한을 확인해주세요.");
+    }
+  };
 
   document.getElementById("tt-clear").onclick = () => {
     const hasAny = Object.values(state.timetable).some((arr) => arr.some((s) => s && s.trim()));
@@ -650,6 +667,16 @@ function renderTimetable() {
     }
   };
   initIcons();
+}
+
+function timetableToScriptableText() {
+  const keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const lines = keys.map((k) => {
+    const arr = state.timetable[k] || [];
+    const items = arr.map((s) => JSON.stringify(s || "")).join(", ");
+    return `  ${k}: [${items}]`;
+  });
+  return `const TIMETABLE = {\n${lines.join(",\n")}\n};`;
 }
 
 function buildTimetableGrid() {
