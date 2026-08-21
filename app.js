@@ -12,7 +12,7 @@ const BUG_REPORT_EMAIL = "ARIA.myarea@gmail.com";
 const BUG_REPORT_FORM_ENDPOINT = "https://formspree.io/f/xkjwkedd";
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const DOW_KEYS = ["mon", "tue", "wed", "thu", "fri"];
-const WEEK_DOW_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const WEEK_DOW_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DOW_LABEL = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
 
 function todayStr(d = new Date()) {
@@ -359,7 +359,7 @@ function renderHome() {
 
     <div class="section-title"><i data-lucide="cloud-sun" class="ti"></i>오늘 날씨</div>
     <div id="weather-slot"></div>
-    <div class="tt-note">날씨 정보 제공: Open-Meteo (open-meteo.com)</div>
+    <div class="source-note">날씨 정보 제공: Open-Meteo (open-meteo.com)</div>
   `;
   renderDdaySlot();
   renderWeatherSlot();
@@ -595,9 +595,9 @@ function renderTimetable() {
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <div class="stepper">
           교시 수
-          <button id="p-minus">−</button>
+          <button id="p-minus"><i data-lucide="minus"></i></button>
           <b id="p-count">${state.periods}</b>
-          <button id="p-plus">+</button>
+          <button id="p-plus"><i data-lucide="plus"></i></button>
         </div>
         <button class="tt-fetch-btn" id="tt-fetch">나이스로 불러오기</button>
         <button class="tt-fetch-btn" id="tt-copy"><i data-lucide="clipboard-copy" style="width:12px;height:12px;margin-right:4px;"></i>위젯용 복사</button>
@@ -1055,7 +1055,10 @@ function openSettingsModal() {
         </div>
         <div class="field">
           <label>사진 (선택)</label>
-          <input type="file" id="bug-photo" accept="image/*" />
+          <input type="file" id="bug-photo" accept="image/*" class="file-input-hidden" />
+          <label for="bug-photo" class="btn-secondary" id="bug-photo-label" style="display:block; text-align:center; margin-top:0;">
+            <i data-lucide="image-plus" style="width:14px;height:14px;margin-right:5px;vertical-align:-2px;"></i>사진 선택
+          </label>
         </div>
         <button class="btn-secondary" id="bug-send">신고 보내기</button>
       </div>
@@ -1081,6 +1084,15 @@ function openSettingsModal() {
     el.style.display = show ? "block" : "none";
     document.getElementById("guide-toggle").textContent = show ? "접기" : "발급 방법 보기";
   };
+
+  document.getElementById("bug-photo").addEventListener("change", (e) => {
+    const label = document.getElementById("bug-photo-label");
+    const file = e.target.files[0];
+    label.innerHTML = file
+      ? `<i data-lucide="image-plus" style="width:14px;height:14px;margin-right:5px;vertical-align:-2px;"></i>${escapeHtml(file.name)}`
+      : `<i data-lucide="image-plus" style="width:14px;height:14px;margin-right:5px;vertical-align:-2px;"></i>사진 선택`;
+    initIcons();
+  });
 
   const gradeToggle = document.getElementById("grade-toggle");
   if (gradeToggle) {
